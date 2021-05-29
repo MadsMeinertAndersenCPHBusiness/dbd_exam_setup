@@ -1,0 +1,86 @@
+services:
+
+  dbdExam:
+    image: madsimo/dbd_exam:2.0.1
+    ports:
+      - 9090:9090
+    depends_on:
+      - neo4jFoodService
+      - db
+      - redis
+    networks:
+      - MSnetwork
+    
+  neo4jFoodService:
+    image: madsimo/neo4j_food_service:2.0.0
+    ports:
+      - 8085:8085
+    depends_on:
+      - neo4j
+    networks:
+      - MSnetwork
+  db:
+    image: postgres
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    networks:
+      - MSnetwork
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+    networks:
+      - MSnetwork
+      
+  redis:
+    image: "redis:alpine"
+    restart: always
+    ports:
+     - "6379:6379"
+
+    volumes:
+     - $PWD/redis-data:/var/lib/redis
+     - $PWD/redis.conf:/usr/local/etc/redis/redis.conf
+
+    environment:
+     - REDIS_REPLICATION_MODE=master
+    networks:
+      - MSnetwork
+      
+  neo4j:
+    image: neo4j:3.5
+    restart: always
+    ports:
+      - 7474:7474
+      - 7687:7687
+    volumes:
+      - ./conf:/conf
+      - ./data:/data
+      - ./import:/import
+      - ./logs:/logs
+      - ./plugins:/plugins
+    environment: 
+      # Raise memory limits
+      - NEO4JLABS_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_whitelist=gds.*, apoc.*
+      - NEO4J_dbms_security_procedures_unrestricted=gds.*, apoc.*
+      - NEO4J_apoc_import_file_use__neo4j__config=true
+      - NEO4J_apoc_import_file_enabled=true
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_dbms_memory_pagecache_size=1G
+      - NEO4J_dbms.memory.heap.initial_size=1G
+      - NEO4J_dbms_memory_heap_max__size=1G
+    networks:
+      - MSnetwork
+      
+      
+      
+networks:
+  MSnetwork:
+    driver: bridge
